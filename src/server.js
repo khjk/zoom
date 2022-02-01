@@ -27,9 +27,29 @@ const handleListen = () => console.log(`Listening on http:localhost:3000`);
 const server = http.createServer(app);
 const wss = new WebSocket.Server({server});
 //connection이 이루어지면 작동. 파라미터에 는 브라우저와 서버간의 연결이 전달
-function handleConnection(socket) {
-    console.log(socket); //backend의 소켓
-}
-wss.on("connection", handleConnection);
+
+const sockets = [];
+
+//wss는 서버전체를 위한
+wss.on("connection", (socket) => {
+    sockets.push(socket);
+    socket["nickname"] = "Anon";
+    //새로운 브라우저가 들어올때마다 아래항목 실행
+    //console.log(socket); //backend의 소켓
+    socket.on("close", () => console.log("Disconnected from the Browser"));
+    socket.on("message", msg => {
+        const message = JSON.parse(msg.toString('utf-8'));
+        console.log(message.type);
+        switch(message.type) {
+            case "new_message" : 
+                sockets.forEach(aSocket => aSocket.send(`${socket.nickname}:${message.payload}`)); //브라우저로 데이터 
+                break;
+            case "nickname" :
+                socket["nickname"] = message.payload;
+                break;
+        }
+        
+    });
+});
 
 server.listen(3000, handleListen);
